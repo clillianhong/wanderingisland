@@ -20,6 +20,7 @@ public class FloatingIslandGenerator : MonoBehaviour
     public float noiseScale;
     public float jaggedDensity;
     public float jaggedScale;
+    public int meshDensity;
     bool islandCreated; 
 
     FloatingIsland island;
@@ -28,7 +29,7 @@ public class FloatingIslandGenerator : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        island = new FloatingIsland(new Vector3(0,0,0), minRadius, seed, islandScale, jaggedDensity, jaggedScale);
+        island = new FloatingIsland(new Vector3(0,0,0), minRadius, seed, islandScale, jaggedDensity, jaggedScale, meshDensity);
         islandCreated = true;
     }
 
@@ -44,28 +45,16 @@ public class FloatingIslandGenerator : MonoBehaviour
     }
     public void UpdateIsland()
     {
-        island = new FloatingIsland(new Vector3(0, 0, 0), minRadius, seed, islandScale, jaggedDensity, jaggedScale);
+        island = new FloatingIsland(new Vector3(0, 0, 0), minRadius, seed, islandScale, jaggedDensity, jaggedScale, meshDensity);
         islandCreated = true;
     }
 
     public void DrawMapInEditor()
     {
-        FloatingIsland testIsland = new FloatingIsland(new Vector3(0, 0, 0), minRadius, seed, islandScale, jaggedDensity, jaggedScale);
+        FloatingIsland testIsland = new FloatingIsland(new Vector3(0, 0, 0), minRadius, seed, islandScale, jaggedDensity, jaggedScale, meshDensity);
         print("floating island created");
         //DrawDebugGizmo(testIsland);
     }
-
-    [DrawGizmo(GizmoType.Selected | GizmoType.Active)]
-    static void DrawDebugGizmo(FloatingIsland isl)
-    {
-        Gizmos.color = new Color(1, 0, 0, 0.5f);
-       
-        foreach (Vector3 vec in isl.islandOutline)
-        {
-            Gizmos.DrawCube(vec, new Vector3(1, 1, 1));
-        }
-    }
-
 
     void OnDrawGizmos()
     {
@@ -74,22 +63,23 @@ public class FloatingIslandGenerator : MonoBehaviour
 
             Gizmos.color = new Color(1, 0, 0, 0.5f);
 
-            foreach (Vector3 vec in island.islandOutline)
+            foreach (Vector3 vec in island.baseVertices)
             {
                 Gizmos.DrawCube(vec, new Vector3(1, 1, 1));
             }
+
         }
     }
-
-    public class FloatingIsland 
+        public class FloatingIsland
     {
         Vector3 baseCenterPosition;
         float minorRadius;
         float islandScale;
         float jaggedScale;
         float jaggedDensity;
-        int seed; 
-        public Vector3[] islandOutline;
+        int meshDensity;
+        int seed;
+        public Vector3[] baseVertices;
         public FloatingIslandGenerator islandGenerator;
 
         GameObject meshObject;
@@ -106,43 +96,70 @@ public class FloatingIslandGenerator : MonoBehaviour
         bool mapDataReceived;
         int previousLODIndex = -1;
 
-        public FloatingIsland(Vector3 center, float minRadius, int seed, float islandScale, float jaggedDensity, float jaggedScale)
+        public FloatingIsland(Vector3 center, float minRadius, int seed, float islandScale, float jaggedDensity, float jaggedScale, int meshDensity)
         {
             islandGenerator = FindObjectOfType<FloatingIslandGenerator>();
             this.baseCenterPosition = center;
             this.minorRadius = minRadius;
             this.islandScale = islandScale;
-            this.jaggedDensity= jaggedDensity;
-            this.jaggedScale = jaggedScale; 
+            this.jaggedDensity = jaggedDensity;
+            this.jaggedScale = jaggedScale;
             this.seed = seed;
-            this.islandOutline = CreateIslandOutline();
+            this.meshDensity = meshDensity;
+            this.baseVertices = CreateBaseVertices();
         }
 
-        public Vector3[] CreateIslandOutline()
+        public Vector3[] CreateBaseVertices()
         {
-            int divisions = (int) (12f * this.jaggedDensity);
-            Vector3[] outline = new Vector3[divisions];
-            float deltaTheta = 360f / (float) divisions;
-            float[,] noiseDivisionMap = Noise.GenerateNoiseMap(divisions, 1, 
-                this.seed, 
+            int divisions = (int)(12f * this.jaggedDensity);
+            print("Instantiate outline");
+            Vector3[] outline = new Vector3[divisions * meshDensity - (divisions -1)];
+            float deltaTheta = 360f / (float)divisions;
+            float[,] noiseDivisionMap = Noise.GenerateNoiseMap(divisions, 1,
+                this.seed,
                 islandGenerator.noiseScale,
-                islandGenerator.octaves, 
-                islandGenerator.persistance, 
-                islandGenerator.lacunarity, 
-                islandGenerator.offset, 
+                islandGenerator.octaves,
+                islandGenerator.persistance,
+                islandGenerator.lacunarity,
+                islandGenerator.offset,
                 islandGenerator.normalizeMode);
 
-            float theta = 0;  
+            float theta = 0;
+            bool firstOriginVecAssigned = false; //avoid duplicates 
+            int noiseIdx = 0;
 
-            for (int i = 0; i<divisions; i++)
+            int increment = meshDensity;
+            //generate vertices 
+            for (int i = 0; i < divisions * meshDensity - (divisions-1) - meshDensity + 1; i += increment - 1)
             {
-                float rayLength = noiseDivisionMap[i, 0] * this.jaggedScale + this.minorRadius;
-                float xPart =  rayLength * (float) Math.Cos((double) theta * Math.PI / 180f);
-                float zPart =  rayLength * (float) Math.Sin((double) theta * Math.PI / 180f);
-                outline[i] = new Vector3(xPart + this.baseCenterPosition.x, this.baseCenterPosition.y, zPart + baseCenterPosition.z);
+                float rayLength = noiseDivisionMap[noiseIdx, 0] * this.jaggedScale + this.minorRadius;
+                noiseIdx++;
+                float offset = 0;
 
+                increment = 0;
+                for (int j = 0; j < meshDensity; j++)
+                {
+                    float modRayLength = rayLength - offset;
+                    float xPart = modRayLength * (float)Math.Cos((double)theta * Math.PI / 180f);
+                    float zPart = modRayLength * (float)Math.Sin((double)theta * Math.PI / 180f);
+                    if (xPart == 0 && zPart == 0 && !firstOriginVecAssigned)
+                    {
+                        firstOriginVecAssigned = true;
+                    }
+                    if (xPart == 0 && zPart == 0 && firstOriginVecAssigned)
+                    {
+                        break;
+                    }
+                    offset += rayLength / (float)meshDensity;
+                    increment++;
+                    outline[i + j] = new Vector3(xPart + this.baseCenterPosition.x, this.baseCenterPosition.y, zPart + baseCenterPosition.z);
+                }
+                
                 theta += deltaTheta;
+                print("THETA " + theta);
             }
+
+            //fill in vertices 
 
             return outline;
 
@@ -186,4 +203,44 @@ public class FloatingIslandGenerator : MonoBehaviour
         public int lod;
         public float visibleDstThreshold;
     }
+
+
+
+
+    void OnValidate()
+    {
+        if (lacunarity < 1)
+        {
+            lacunarity = 1;
+        }
+        if (octaves < 0)
+        {
+            octaves = 0;
+        }
+
+        if(meshDensity < 5)
+        {
+            meshDensity = 5;
+        }
+        if(islandScale < 1)
+        {
+            islandScale = 1;
+        }
+        if (jaggedDensity < 1)
+        {
+            jaggedDensity = 1;
+        }
+        if (jaggedScale < 1)
+        {
+            jaggedScale = 1;
+        }
+        if (noiseScale < 1)
+        {
+            noiseScale = 1;
+        }
+
+
+    }
+
+
 }
