@@ -25,6 +25,15 @@ public class FloatingIslandGenerator : MonoBehaviour
 
     FloatingIsland island;
 
+    public float noiseScale_top;
+    public int octaves_top;
+    public float persistance_top;
+    public float lacunarity_top;
+    public Vector2 offset_top;
+
+    public float maxTopHeight;
+    public float maxBotHeight;
+
 
     // Start is called before the first frame update
     void Start()
@@ -62,8 +71,13 @@ public class FloatingIslandGenerator : MonoBehaviour
         {
 
             Gizmos.color = new Color(1, 0, 0, 0.5f);
+            foreach (Vector3 vec in island.topVertices)
+            {             
+                Gizmos.DrawCube(vec, new Vector3(1, 1, 1));   
+            }
 
-            foreach (Vector3 vec in island.baseVertices)
+            Gizmos.color = new Color(0, 1, 0, 0.5f);
+            foreach (Vector3 vec in island.botVertices)
             {
                 Gizmos.DrawCube(vec, new Vector3(1, 1, 1));
             }
@@ -79,7 +93,9 @@ public class FloatingIslandGenerator : MonoBehaviour
         float jaggedDensity;
         int meshDensity;
         int seed;
-        public Vector3[] baseVertices;
+        public Vector3[] topVertices;
+        public Vector3[] botVertices;
+        public Tuple<Vector3[], Vector3[]> islandVertices;
         public FloatingIslandGenerator islandGenerator;
 
         GameObject meshObject;
@@ -106,14 +122,20 @@ public class FloatingIslandGenerator : MonoBehaviour
             this.jaggedScale = jaggedScale;
             this.seed = seed;
             this.meshDensity = meshDensity;
-            this.baseVertices = CreateBaseVertices();
+            this.islandVertices = CreateBaseVertices();
+            this.topVertices = this.islandVertices.Item1;
+            this.botVertices = this.islandVertices.Item2;
         }
 
-        public Vector3[] CreateBaseVertices()
+        public Tuple<Vector3[], Vector3[]> CreateBaseVertices()
         {
             int divisions = (int)(12f * this.jaggedDensity);
+            int numVertices = divisions * meshDensity - (divisions - 1);
             print("Instantiate outline");
-            Vector3[] outline = new Vector3[divisions * meshDensity - (divisions -1)];
+
+            Vector3[] topVertices = new Vector3[numVertices];
+            Vector3[] botVertices = new Vector3[numVertices];
+
             float deltaTheta = 360f / (float)divisions;
             float[,] noiseDivisionMap = Noise.GenerateNoiseMap(divisions, 1,
                 this.seed,
@@ -124,44 +146,57 @@ public class FloatingIslandGenerator : MonoBehaviour
                 islandGenerator.offset,
                 islandGenerator.normalizeMode);
 
+            float[,] topNoiseMap = Noise.GenerateNoiseMap(numVertices, 1,
+              this.seed,
+              islandGenerator.noiseScale_top,
+              islandGenerator.octaves_top,
+              islandGenerator.persistance_top,
+              islandGenerator.lacunarity_top,
+              islandGenerator.offset_top,
+              islandGenerator.normalizeMode);
+
             float theta = 0;
             bool firstOriginVecAssigned = false; //avoid duplicates 
             int noiseIdx = 0;
 
             int increment = meshDensity;
             //generate vertices 
-            for (int i = 0; i < divisions * meshDensity - (divisions-1) - meshDensity + 1; i += increment - 1)
+            for (int i = 0; i < divisions * meshDensity - (divisions-1) - meshDensity + 1; i += meshDensity - 1)
             {
                 float rayLength = noiseDivisionMap[noiseIdx, 0] * this.jaggedScale + this.minorRadius;
-                noiseIdx++;
-                float offset = 0;
-
-                increment = 0;
+                float offset = rayLength;
+                float offsetIncr = rayLength / (float)meshDensity;
                 for (int j = 0; j < meshDensity; j++)
                 {
                     float modRayLength = rayLength - offset;
                     float xPart = modRayLength * (float)Math.Cos((double)theta * Math.PI / 180f);
                     float zPart = modRayLength * (float)Math.Sin((double)theta * Math.PI / 180f);
-                    if (xPart == 0 && zPart == 0 && !firstOriginVecAssigned)
+
+                    offset -= offsetIncr;
+                    if(xPart == 0 && zPart == 0)
                     {
-                        firstOriginVecAssigned = true;
+                        continue;
                     }
-                    if (xPart == 0 && zPart == 0 && firstOriginVecAssigned)
-                    {
-                        break;
-                    }
-                    offset += rayLength / (float)meshDensity;
-                    increment++;
-                    outline[i + j] = new Vector3(xPart + this.baseCenterPosition.x, this.baseCenterPosition.y, zPart + baseCenterPosition.z);
+                    topVertices[i + j] = new Vector3(
+                        xPart + this.baseCenterPosition.x, 
+                        this.baseCenterPosition.y + topNoiseMap[i+j,0] * (islandGenerator.maxTopHeight * (1 -(float)j/(float)meshDensity)), 
+                        zPart + baseCenterPosition.z);
+
+                    botVertices[i + j] = new Vector3(
+                        xPart + this.baseCenterPosition.x,
+                        this.baseCenterPosition.y - topNoiseMap[i + j, 0] * (islandGenerator.maxBotHeight * (1 - (float)j / (float)meshDensity)),
+                        zPart + baseCenterPosition.z);
                 }
                 
                 theta += deltaTheta;
-                print("THETA " + theta);
+                noiseIdx++;
             }
 
-            //fill in vertices 
+            //raise central vertex
+            topVertices[0] = new Vector3(this.baseCenterPosition.x, topNoiseMap[numVertices-1, 0] * islandGenerator.maxTopHeight, baseCenterPosition.z);
+            botVertices[0] = topVertices[0];
 
-            return outline;
+            return new Tuple<Vector3[], Vector3[]>(topVertices, botVertices);
 
         }
     }
