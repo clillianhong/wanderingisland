@@ -7,6 +7,8 @@ using System.Collections.Specialized;
 
 public class FloatingIslandGenerator : MonoBehaviour
 {
+    public enum DrawMode {Gizmos, Mesh};
+    public DrawMode drawMode;
     public int octaves;
     public float persistance;
     public float lacunarity;
@@ -34,12 +36,14 @@ public class FloatingIslandGenerator : MonoBehaviour
     public float maxTopHeight;
     public float maxBotHeight;
 
+    bool drawGizmos;
+
+
 
     // Start is called before the first frame update
     void Start()
     {
-        island = new FloatingIsland(new Vector3(0,0,0), minRadius, seed, islandScale, jaggedDensity, jaggedScale, meshDensity);
-        islandCreated = true;
+   
     }
 
     // Update is called once per frame
@@ -47,27 +51,38 @@ public class FloatingIslandGenerator : MonoBehaviour
     {
        
     }
+
     public FloatingIsland getIsland()
     {
         return island;
 
     }
-    public void UpdateIsland()
+   
+    public void DrawMapInEditor()
+    {
+        MapDisplay display = FindObjectOfType<MapDisplay> ();
+
+        CreateIsland();
+
+        if(drawMode == DrawMode.Gizmos){
+            drawGizmos = true;
+        }else if(drawMode == DrawMode.Mesh){
+            display.DrawOnlyMesh (island.islandMesh);
+        }
+       
+
+    }
+
+    public void CreateIsland()
     {
         island = new FloatingIsland(new Vector3(0, 0, 0), minRadius, seed, islandScale, jaggedDensity, jaggedScale, meshDensity);
         islandCreated = true;
     }
 
-    public void DrawMapInEditor()
-    {
-        FloatingIsland testIsland = new FloatingIsland(new Vector3(0, 0, 0), minRadius, seed, islandScale, jaggedDensity, jaggedScale, meshDensity);
-        print("floating island created");
-        //DrawDebugGizmo(testIsland);
-    }
 
     void OnDrawGizmos()
     {
-        if (islandCreated == true)
+        if (islandCreated == true && drawGizmos)
         {
 
             Gizmos.color = new Color(1, 0, 0, 0.5f);
@@ -98,6 +113,8 @@ public class FloatingIslandGenerator : MonoBehaviour
         public Tuple<Vector3[], Vector3[]> islandVertices;
         public FloatingIslandGenerator islandGenerator;
 
+        public IslandMeshData islandMesh;
+
         GameObject meshObject;
         Vector2 position;
         Bounds bounds;
@@ -118,20 +135,50 @@ public class FloatingIslandGenerator : MonoBehaviour
             this.baseCenterPosition = center;
             this.minorRadius = minRadius;
             this.islandScale = islandScale;
+            if(islandScale <= 0)
+            {
+                this.islandScale = 1f; 
+            }
             this.jaggedDensity = jaggedDensity;
             this.jaggedScale = jaggedScale;
             this.seed = seed;
             this.meshDensity = meshDensity;
+
+            Noise.NoiseParams edgeNoiseParams = new Noise.NoiseParams(islandGenerator.noiseScale,
+                islandGenerator.octaves,
+                islandGenerator.persistance,
+                islandGenerator.lacunarity,
+                islandGenerator.offset,
+                islandGenerator.normalizeMode);
+
+            Noise.NoiseParams contourNoiseParams = new Noise.NoiseParams(islandGenerator.noiseScale_top,
+              islandGenerator.octaves_top,
+              islandGenerator.persistance_top,
+              islandGenerator.lacunarity_top,
+              islandGenerator.offset_top,
+              islandGenerator.normalizeMode);
+
+            this.islandMesh = MeshGenerator.GenerateFloatingIslandMesh(
+                this.baseCenterPosition,
+                islandGenerator.maxTopHeight,
+                islandGenerator.maxBotHeight,
+                islandGenerator.jaggedScale,
+                islandGenerator.islandScale,
+                this.minorRadius,
+                islandGenerator.jaggedDensity, 
+                this.meshDensity,
+                this.seed,
+                edgeNoiseParams,
+                contourNoiseParams);
+
             this.islandVertices = CreateBaseVertices();
             this.topVertices = this.islandVertices.Item1;
             this.botVertices = this.islandVertices.Item2;
         }
-
         public Tuple<Vector3[], Vector3[]> CreateBaseVertices()
         {
             int divisions = (int)(12f * this.jaggedDensity);
             int numVertices = divisions * meshDensity - (divisions - 1);
-            print("Instantiate outline");
 
             Vector3[] topVertices = new Vector3[numVertices];
             Vector3[] botVertices = new Vector3[numVertices];
@@ -156,14 +203,12 @@ public class FloatingIslandGenerator : MonoBehaviour
               islandGenerator.normalizeMode);
 
             float theta = 0;
-            bool firstOriginVecAssigned = false; //avoid duplicates 
             int noiseIdx = 0;
 
-            int increment = meshDensity;
             //generate vertices 
-            for (int i = 0; i < divisions * meshDensity - (divisions-1) - meshDensity + 1; i += meshDensity - 1)
+            for (int i = 0; i < divisions * (meshDensity - 1); i += meshDensity - 1)
             {
-                float rayLength = noiseDivisionMap[noiseIdx, 0] * this.jaggedScale + this.minorRadius;
+                float rayLength = noiseDivisionMap[noiseIdx, 0] * this.jaggedScale + this.minorRadius * this.islandScale;
                 float offset = rayLength;
                 float offsetIncr = rayLength / (float)meshDensity;
                 for (int j = 0; j < meshDensity; j++)
@@ -184,7 +229,7 @@ public class FloatingIslandGenerator : MonoBehaviour
 
                     botVertices[i + j] = new Vector3(
                         xPart + this.baseCenterPosition.x,
-                        this.baseCenterPosition.y - topNoiseMap[i + j, 0] * (islandGenerator.maxBotHeight * (1 - (float)j / (float)meshDensity)),
+                        this.baseCenterPosition.y - topNoiseMap[i + j, 0] * (islandGenerator.maxBotHeight * ( (float) Math.Sqrt(1f - (float)j / (float)meshDensity)) ),
                         zPart + baseCenterPosition.z);
                 }
                 
@@ -196,6 +241,7 @@ public class FloatingIslandGenerator : MonoBehaviour
             topVertices[0] = new Vector3(this.baseCenterPosition.x, topNoiseMap[numVertices-1, 0] * islandGenerator.maxTopHeight, baseCenterPosition.z);
             botVertices[0] = topVertices[0];
 
+            print("Finished up generating vertices");
             return new Tuple<Vector3[], Vector3[]>(topVertices, botVertices);
 
         }
@@ -239,7 +285,7 @@ public class FloatingIslandGenerator : MonoBehaviour
         public float visibleDstThreshold;
     }
 
-
+    
 
 
     void OnValidate()

@@ -16,13 +16,13 @@ public class FloatingIslandEditor : Editor
 		{
 			if (mapGen.autoUpdate)
 			{
-				mapGen.UpdateIsland();
+				mapGen.DrawMapInEditor();
 			}
 		}
 
 		if (GUILayout.Button("Generate"))
 		{
-			mapGen.UpdateIsland();
+			mapGen.DrawMapInEditor();
 
 		}
 	}
