@@ -17,4 +17,8 @@ public class MapDisplay : MonoBehaviour {
 		meshRenderer.sharedMaterial.mainTexture = texture;
 	}
 
+	public void DrawOnlyMesh(IslandMeshData meshData){
+		meshFilter.sharedMesh = meshData.CreateMesh ();
+	}
+
 }

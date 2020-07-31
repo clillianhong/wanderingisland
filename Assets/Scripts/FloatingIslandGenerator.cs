@@ -67,6 +67,7 @@ public class FloatingIslandGenerator : MonoBehaviour
         if(drawMode == DrawMode.Gizmos){
             drawGizmos = true;
         }else if(drawMode == DrawMode.Mesh){
+            drawGizmos = false;
             display.DrawOnlyMesh (island.islandMesh);
         }
        

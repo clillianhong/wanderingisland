@@ -27,4 +27,16 @@ public static class TextureGenerator {
 		return TextureFromColourMap (colourMap, width, height);
 	}
 
+	// public static Texture2D TextureFromIslandHeights(int divisions, int meshRings, IslandMeshData meshData) {
+	
+	// 	Color[] colourMap = new Color[divisions * meshRings - (divisions - 1)];
+	// 	for (int y = 0; y < divisions; y++) {
+	// 		for (int x = 0; x < meshRings; x++) {
+	// 			colourMap [y * meshRings + x] = Color.Lerp (Color.black, Color.white, meshData.vertices[y * meshRings + x].y);
+	// 		}
+	// 	}
+
+	// 	return TextureFromColourMap (colourMap, width, height);
+	// }
+
 }
