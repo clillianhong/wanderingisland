@@ -111,9 +111,12 @@ public static class MeshGenerator {
 				offset -= offsetIncr;
 				if(xPart == 0 && zPart == 0)
 				{
+					
 					continue;
 				}
+
 				
+
 				float curve1 = 1 - ((float)j/(float)meshRings);
 				float curve2 = 1 - (float)Math.Sqrt((float)j/(float)meshRings);
 				float curve3 = 1 - (float)Math.Pow((float)j/(float)meshRings, 2);
@@ -139,6 +142,12 @@ public static class MeshGenerator {
 				// 	baseCenterPosition.y - topNoiseMapType2[j, noiseIdx] * (maxBotHeight *  ( 1f - (float)j / (float)meshRings)),
 				// 	zPart + baseCenterPosition.z);
 
+				// seal center disc 
+				if(j == 1){
+						//add island top triangles
+						meshData.AddTriangle(topVertexIndex, numVertices/2, topVertexIndex + 1);
+				}
+
 				
 				if(noiseIdx < divisions-1 && j < meshRings - 2){
 						//add island top triangles
@@ -149,8 +158,12 @@ public static class MeshGenerator {
 						meshData.AddTriangle(botVertexIndex, botVertexIndex - (meshRings + 1),  botVertexIndex - meshRings);
 				}
 
-				if(j == meshRings-1){
-					
+				if(noiseIdx < divisions-1 && j == meshRings-3){
+					meshData.AddTriangle(topVertexIndex + 1, topVertexIndex + (meshRings + 1), topVertexIndex + 2);
+					meshData.AddTriangle(botVertexIndex - (meshRings + 1), botVertexIndex - 1, botVertexIndex - 2);
+
+					meshData.AddTriangle(topVertexIndex + 2, topVertexIndex + (meshRings + 1),  botVertexIndex - 2);
+					meshData.AddTriangle(botVertexIndex - 2, topVertexIndex + (meshRings + 1),  (botVertexIndex - (meshRings + 1)));
 				}
 
 				topVertexIndex++;
@@ -179,10 +192,7 @@ public static class MeshGenerator {
 		for (int i = 1; i < meshRings; i++){
 			
 			if(i == meshRings - 1){
-			
-			Debug.Log ("top triangle " + meshData.vertices[topVertexIndex+i ] + " " + meshData.vertices[ topVertexIndex+i-1 ] + " "+ meshData.vertices[ topIdxBegin]);
-			Debug.Log ("bottom triangle " + meshData.vertices[botVertexIndex-i ] + " " + meshData.vertices[botIdxBegin ] + " "+ meshData.vertices[botVertexIndex-i+1]);
-					
+		
 			meshData.AddTriangle(topIdxBegin, botVertexIndex-i+1, topVertexIndex+i-1); 
 			meshData.AddTriangle(topIdxBegin, botIdxBegin, botVertexIndex-i+1);
 			
@@ -236,11 +246,33 @@ public class IslandMeshData {
 		triangles = new int[3 * 2 * (divisions * (1 + 2*(meshRings-2)))]; //FIGURE OUT TRIANGLES TODO
 	}
 
-		public void AddTriangle(int a, int b, int c) {
+		public void AddTriangle(int a, int b, int c, bool debug=false) {
 		triangles [triangleIndex] = a;
 		triangles [triangleIndex + 1] = b;
 		triangles [triangleIndex + 2] = c;
 		triangleIndex += 3;
+		if(debug){
+			Debug.Log("ADD TRIANGLE DEBUG ------------");
+
+			try{
+				Debug.Log ("COORD A: (" + vertices[triangleIndex]);
+			}
+			catch{
+				Debug.Log("COORD A OUT OF BOUNDS " + triangleIndex);
+			}
+			try{
+				Debug.Log ("COORD B: (" + vertices[triangleIndex + 1]);
+			}
+			catch{
+				Debug.Log("COORD B OUT OF BOUNDS " + (triangleIndex + 1));
+			}
+			try{
+				Debug.Log ("COORD C: (" + vertices[triangleIndex + 2]);
+			}
+			catch{
+				Debug.Log("COORD C OUT OF BOUNDS " + (triangleIndex + 2));
+			}
+		}
 	}
 
 	public Mesh CreateMesh() {
