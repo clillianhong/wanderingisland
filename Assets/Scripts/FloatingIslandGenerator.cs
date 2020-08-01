@@ -26,7 +26,6 @@ public class FloatingIslandGenerator : MonoBehaviour
     bool islandCreated; 
 
     FloatingIsland island;
-
     public float noiseScale_top;
     public int octaves_top;
     public float persistance_top;
@@ -70,8 +69,6 @@ public class FloatingIslandGenerator : MonoBehaviour
             drawGizmos = false;
             display.DrawOnlyMesh (island.islandMesh);
         }
-       
-
     }
 
     public void CreateIsland()
@@ -87,16 +84,11 @@ public class FloatingIslandGenerator : MonoBehaviour
         {
 
             Gizmos.color = new Color(1, 0, 0, 0.5f);
-            foreach (Vector3 vec in island.topVertices)
+            foreach (Vector3 vec in island.islandMesh.vertices)
             {             
                 Gizmos.DrawCube(vec, new Vector3(1, 1, 1));   
             }
 
-            Gizmos.color = new Color(0, 1, 0, 0.5f);
-            foreach (Vector3 vec in island.botVertices)
-            {
-                Gizmos.DrawCube(vec, new Vector3(1, 1, 1));
-            }
 
         }
     }
@@ -109,9 +101,6 @@ public class FloatingIslandGenerator : MonoBehaviour
         float jaggedDensity;
         int meshDensity;
         int seed;
-        public Vector3[] topVertices;
-        public Vector3[] botVertices;
-        public Tuple<Vector3[], Vector3[]> islandVertices;
         public FloatingIslandGenerator islandGenerator;
 
         public IslandMeshData islandMesh;
@@ -136,10 +125,7 @@ public class FloatingIslandGenerator : MonoBehaviour
             this.baseCenterPosition = center;
             this.minorRadius = minRadius;
             this.islandScale = islandScale;
-            if(islandScale <= 0)
-            {
-                this.islandScale = 1f; 
-            }
+            this.islandScale = 1f; 
             this.jaggedDensity = jaggedDensity;
             this.jaggedScale = jaggedScale;
             this.seed = seed;
@@ -171,84 +157,9 @@ public class FloatingIslandGenerator : MonoBehaviour
                 this.seed,
                 edgeNoiseParams,
                 contourNoiseParams);
-
-            this.islandVertices = CreateBaseVertices();
-            this.topVertices = this.islandVertices.Item1;
-            this.botVertices = this.islandVertices.Item2;
-        }
-        public Tuple<Vector3[], Vector3[]> CreateBaseVertices()
-        {
-            int divisions = (int)(12f * this.jaggedDensity);
-            int numVertices = divisions * meshDensity - (divisions - 1);
-
-            Vector3[] topVertices = new Vector3[numVertices];
-            Vector3[] botVertices = new Vector3[numVertices];
-
-            float deltaTheta = 360f / (float)divisions;
-            float[,] noiseDivisionMap = Noise.GenerateNoiseMap(divisions, 1,
-                this.seed,
-                islandGenerator.noiseScale,
-                islandGenerator.octaves,
-                islandGenerator.persistance,
-                islandGenerator.lacunarity,
-                islandGenerator.offset,
-                islandGenerator.normalizeMode);
-
-            float[,] topNoiseMap = Noise.GenerateNoiseMap(numVertices, 1,
-              this.seed,
-              islandGenerator.noiseScale_top,
-              islandGenerator.octaves_top,
-              islandGenerator.persistance_top,
-              islandGenerator.lacunarity_top,
-              islandGenerator.offset_top,
-              islandGenerator.normalizeMode);
-
-            float theta = 0;
-            int noiseIdx = 0;
-
-            //generate vertices 
-            for (int i = 0; i < divisions * (meshDensity - 1); i += meshDensity - 1)
-            {
-                float rayLength = noiseDivisionMap[noiseIdx, 0] * this.jaggedScale + this.minorRadius * this.islandScale;
-                float offset = rayLength;
-                float offsetIncr = rayLength / (float)meshDensity;
-                for (int j = 0; j < meshDensity; j++)
-                {
-                    float modRayLength = rayLength - offset;
-                    float xPart = modRayLength * (float)Math.Cos((double)theta * Math.PI / 180f);
-                    float zPart = modRayLength * (float)Math.Sin((double)theta * Math.PI / 180f);
-
-                    offset -= offsetIncr;
-                    if(xPart == 0 && zPart == 0)
-                    {
-                        continue;
-                    }
-                    topVertices[i + j] = new Vector3(
-                        xPart + this.baseCenterPosition.x, 
-                        this.baseCenterPosition.y + topNoiseMap[i+j,0] * (islandGenerator.maxTopHeight * (1 -(float)j/(float)meshDensity)), 
-                        zPart + baseCenterPosition.z);
-
-                    botVertices[i + j] = new Vector3(
-                        xPart + this.baseCenterPosition.x,
-                        this.baseCenterPosition.y - topNoiseMap[i + j, 0] * (islandGenerator.maxBotHeight * ( (float) Math.Sqrt(1f - (float)j / (float)meshDensity)) ),
-                        zPart + baseCenterPosition.z);
-                }
-                
-                theta += deltaTheta;
-                noiseIdx++;
-            }
-
-            //raise central vertex
-            topVertices[0] = new Vector3(this.baseCenterPosition.x, topNoiseMap[numVertices-1, 0] * islandGenerator.maxTopHeight, baseCenterPosition.z);
-            botVertices[0] = topVertices[0];
-
-            print("Finished up generating vertices");
-            return new Tuple<Vector3[], Vector3[]>(topVertices, botVertices);
-
         }
     }
-
-    class FloatingIslandMesh
+      class FloatingIslandMesh
     {
 
         public Mesh mesh;
@@ -304,10 +215,7 @@ public class FloatingIslandGenerator : MonoBehaviour
         {
             meshDensity = 5;
         }
-        if(islandScale < 1)
-        {
-            islandScale = 1;
-        }
+       
         if (jaggedDensity < 1)
         {
             jaggedDensity = 1;
@@ -319,6 +227,9 @@ public class FloatingIslandGenerator : MonoBehaviour
         if (noiseScale < 1)
         {
             noiseScale = 1;
+        }
+        if(islandScale < 0){
+            islandScale = 0.1f;
         }
 
 
