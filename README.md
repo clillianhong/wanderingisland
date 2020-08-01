@@ -25,7 +25,7 @@ The initial disk is copied twice, with offsets going off in opposite directions 
 
 ## Outline Generation 
 
-The paper used approximations based on hand drawn outlines, but for simplicity I instead generate a wobby outline with perlin noise. 
+The paper used approximations based on hand drawn outlines, but for simplicity I'm just generating a wobbly outline with perlin noise. 
 ![Outline visualized with gizmos](https://github.com/clillianhong/wanderingisland/blob/master/Media/outline_floating_island.png?raw=true)
 
 
