@@ -91,8 +91,8 @@ public class FloatingIslandGenerator : MonoBehaviour
 
 
         }
-        Gizmos.color = new Color(0, 0, 1, 1f);
-        Gizmos.DrawCube(new Vector3(0,0,0), new Vector3(1, 1, 1));   
+        // Gizmos.color = new Color(0, 0, 1, 1f);
+        // Gizmos.DrawCube(new Vector3(0,0,0), new Vector3(1, 1, 1));   
     }
         public class FloatingIsland
     {

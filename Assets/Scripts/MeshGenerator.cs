@@ -24,6 +24,7 @@ public static class MeshGenerator {
 
 		for (int y = 0; y < height; y += meshSimplificationIncrement) {
 			for (int x = 0; x < width; x += meshSimplificationIncrement) {
+
 				meshData.vertices [vertexIndex] = new Vector3 (topLeftX + x, heightCurve.Evaluate (heightMap [x, y]) * heightMultiplier, topLeftZ - y);
 				meshData.uvs [vertexIndex] = new Vector2 (x / (float)width, y / (float)height);
 
@@ -90,8 +91,16 @@ public static class MeshGenerator {
 		float theta = 0;
 		int noiseIdx = 0;
 
-		int topVertexIndex = numVertices / 2 + 1;
-		int botVertexIndex = numVertices / 2 - 1;
+		int halfway = numVertices / 2; 
+
+		int topVertexIndex = halfway + 1;
+		int botVertexIndex = halfway - 1;
+
+		int topIdxBegin =  halfway + 1;
+		int botIdxBegin = halfway - 1;
+
+		meshData.vertices[halfway] = new Vector3(baseCenterPosition.x, maxTopHeight/2f, baseCenterPosition.z);
+		meshData.vertices[0] = new Vector3(baseCenterPosition.x, -maxBotHeight/2f, baseCenterPosition.z);
 
 		//generate vertices 
 		for (int i = 0; i < divisions * (meshRings - 1); i += meshRings - 1)
@@ -114,8 +123,6 @@ public static class MeshGenerator {
 					
 					continue;
 				}
-
-				
 
 				float curve1 = 1 - ((float)j/(float)meshRings);
 				float curve2 = 1 - (float)Math.Sqrt((float)j/(float)meshRings);
@@ -142,13 +149,22 @@ public static class MeshGenerator {
 				// 	baseCenterPosition.y - topNoiseMapType2[j, noiseIdx] * (maxBotHeight *  ( 1f - (float)j / (float)meshRings)),
 				// 	zPart + baseCenterPosition.z);
 
-				// seal center disc 
-				if(j == 1){
-						//add island top triangles
-						meshData.AddTriangle(topVertexIndex, numVertices/2, topVertexIndex + 1);
-				}
 
-				
+				// seal center disc 
+				if(j == 1 && noiseIdx < divisions-1){
+						//add island top triangles
+						// meshData.AddTriangle(topVertexIndex, topVertexIndex + (meshRings + 1), topVertexIndex + 1);
+						meshData.AddTriangle(topVertexIndex,  topVertexIndex + meshRings, topVertexIndex + (meshRings + 1), true);
+						meshData.AddTriangle(topVertexIndex, topVertexIndex + (meshRings - 1), topVertexIndex + meshRings, true);
+
+						meshData.AddTriangle( botVertexIndex,  botVertexIndex - meshRings, botVertexIndex - (meshRings - 1), true);
+
+						//connect to center
+						meshData.AddTriangle(topVertexIndex+meshRings-1, topVertexIndex, halfway);
+						meshData.AddTriangle(botVertexIndex, botVertexIndex-meshRings + 1, halfway);
+				}				
+
+				//add middle triangles
 				if(noiseIdx < divisions-1 && j < meshRings - 2){
 						//add island top triangles
 						meshData.AddTriangle(topVertexIndex, topVertexIndex + (meshRings + 1), topVertexIndex + 1);
@@ -158,12 +174,45 @@ public static class MeshGenerator {
 						meshData.AddTriangle(botVertexIndex, botVertexIndex - (meshRings + 1),  botVertexIndex - meshRings);
 				}
 
-				if(noiseIdx < divisions-1 && j == meshRings-3){
-					meshData.AddTriangle(topVertexIndex + 1, topVertexIndex + (meshRings + 1), topVertexIndex + 2);
-					meshData.AddTriangle(botVertexIndex - (meshRings + 1), botVertexIndex - 1, botVertexIndex - 2);
+				// seal the edges 
+				if(noiseIdx < divisions-1 && j == meshRings-2){
+					//extra
+					meshData.AddTriangle(topVertexIndex, topVertexIndex + (meshRings), topVertexIndex + 1);
+					meshData.AddTriangle(botVertexIndex - (meshRings), botVertexIndex, botVertexIndex - 1);
 
-					meshData.AddTriangle(topVertexIndex + 2, topVertexIndex + (meshRings + 1),  botVertexIndex - 2);
-					meshData.AddTriangle(botVertexIndex - 2, topVertexIndex + (meshRings + 1),  (botVertexIndex - (meshRings + 1)));
+					// //stitch gap
+					meshData.AddTriangle(topVertexIndex + 1, topVertexIndex + (meshRings),  botVertexIndex - 1);
+					meshData.AddTriangle(botVertexIndex - 1, topVertexIndex + (meshRings),  (botVertexIndex - (meshRings)));
+				}
+
+				// seal the end of the disc 
+				if(noiseIdx == divisions - 1 && j < meshRings - 1){
+					
+					//seal the edges
+					if( j == meshRings-2){
+						//extra
+						meshData.AddTriangle(topVertexIndex + 1, topVertexIndex, topIdxBegin);
+						meshData.AddTriangle(botVertexIndex - 1, botIdxBegin, botVertexIndex);
+						//stitch gap 
+						meshData.AddTriangle(topVertexIndex + 1, topIdxBegin, botVertexIndex-1);
+						meshData.AddTriangle(botVertexIndex-1, topIdxBegin, botIdxBegin);
+					}else{ //normal 
+						meshData.AddTriangle(topVertexIndex + 1, topVertexIndex, topIdxBegin);
+						meshData.AddTriangle(topVertexIndex + 1, topIdxBegin, topIdxBegin+1);
+
+						meshData.AddTriangle(botVertexIndex - 1, botIdxBegin, botVertexIndex);
+						meshData.AddTriangle(botVertexIndex - 1, botIdxBegin-1, botIdxBegin);
+					}
+
+					// seal the center
+					if(j==1){
+						meshData.AddTriangle(botVertexIndex, botIdxBegin, halfway);
+						meshData.AddTriangle(topIdxBegin, topVertexIndex, halfway);
+					}
+
+					
+					topIdxBegin++;
+					botIdxBegin--;
 				}
 
 				topVertexIndex++;
@@ -174,52 +223,55 @@ public static class MeshGenerator {
 			noiseIdx++;
 		}
 
-		int topIdxBegin =  numVertices / 2 + 1;
-		int botIdxBegin = numVertices / 2 - 1;
-		topVertexIndex = numVertices - 1;
-		botVertexIndex = 0;
+		
+		topIdxBegin =  halfway + 1;
+		botIdxBegin = halfway - 1;
 
-		//raise central vertex
-		meshData.vertices[numVertices/2] = new Vector3(baseCenterPosition.x, topNoiseMap[numVertices / 2-1, 0] * maxTopHeight, baseCenterPosition.z);
+		topVertexIndex = numVertices - meshRings;
+		botVertexIndex = meshRings;
 
 		Debug.Log ( "Divisions " + divisions);
 		Debug.Log ( "MeshRings " + meshRings);
 		
-		topVertexIndex -= meshRings+divisions/3+4;
-		botVertexIndex += meshRings+divisions/3+4;
+		// topVertexIndex -= meshRings;
+		// botVertexIndex += meshRings;
 
 		//patch the beginnning and end triangles 
-		for (int i = 1; i < meshRings; i++){
+		for (int i = 0; i < meshRings; i++){
 			
-			if(i == meshRings - 1){
+			// if(i == meshRings - 1 ){
+			// 	meshData.AddTriangle(topIdxBegin, botVertexIndex-i+1, topVertexIndex+i-1); 
+			// 	meshData.AddTriangle(topIdxBegin, botIdxBegin, botVertexIndex-i+1);
+			
+			// }else{
+			// 	//top 
+			// 	meshData.AddTriangle(topIdxBegin, topIdxBegin+1, topVertexIndex + i); 
+			// 	meshData.AddTriangle(topVertexIndex+i, topVertexIndex+i-1, topIdxBegin); 
+
+			// 	// //bottom 
+			// 	meshData.AddTriangle(botIdxBegin, botVertexIndex-i, botIdxBegin-1); 
+			// 	meshData.AddTriangle(botVertexIndex-i, botIdxBegin, botVertexIndex-i+1); 
 		
-			meshData.AddTriangle(topIdxBegin, botVertexIndex-i+1, topVertexIndex+i-1); 
-			meshData.AddTriangle(topIdxBegin, botIdxBegin, botVertexIndex-i+1);
-			
-			}else{
+			// }  
+
 			//top 
-			meshData.AddTriangle(topIdxBegin, topIdxBegin+1, topVertexIndex + i); 
-			meshData.AddTriangle(topVertexIndex+i, topVertexIndex+i-1, topIdxBegin); 
+				// meshData.AddTriangle(topIdxBegin, topIdxBegin+1, topVertexIndex + i); 
+				// meshData.AddTriangle(topVertexIndex+i, topVertexIndex+i-1, topIdxBegin); 
 
-			// //bottom 
-			meshData.AddTriangle(botIdxBegin, botVertexIndex-i, botIdxBegin-1); 
-			meshData.AddTriangle(botVertexIndex-i, botIdxBegin, botVertexIndex-i+1); 
-		
-			}
+				// meshData.AddTriangle(botIdxBegin, botVertexIndex-i, botIdxBegin-1, true); 
+				// meshData.AddTriangle(botVertexIndex-i, botIdxBegin, botVertexIndex-i+1, true); 
 
-		
-
+				// // //bottom 
+			
+				if(i !=  0 && i < meshRings - 1){
+					// meshData.AddTriangle(botIdxBegin, botVertexIndex-i, botIdxBegin-1, true); 
+					// meshData.AddTriangle(botVertexIndex-i, botIdxBegin, botVertexIndex-i+1, true); 
+				}
+				
 			topIdxBegin++; 
 			botIdxBegin--;
 		}
 
-		topIdxBegin =  numVertices / 2 + 1 ;
-		botIdxBegin = numVertices / 2 - 1 +meshRings;
-		// meshData.AddTriangle(topIdxBegin, topIdxBegin + 1, botIdxBegin);
-
-		// for (int i = 0; i < divisions; i++){
-		// 	meshData.AddTriangle(topIdxBegin, topIdxBegin + 1, botIdxBegin);
-		// }
 
 		return meshData;
 
@@ -243,7 +295,7 @@ public class IslandMeshData {
 
 		Debug.Log ("original size  " + (3 * 4 * meshRings * divisions));
 		Debug.Log("old size " + (3 * 2 * (divisions * (1 + 2*(meshRings-2)))));
-		triangles = new int[3 * 2 * (divisions * (1 + 2*(meshRings-2)))]; //FIGURE OUT TRIANGLES TODO
+		triangles = new int[3 * 4 * meshRings * divisions]; //FIGURE OUT TRIANGLES TODO
 	}
 
 		public void AddTriangle(int a, int b, int c, bool debug=false) {
