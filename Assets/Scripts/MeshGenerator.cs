@@ -52,6 +52,8 @@ public static class MeshGenerator {
 		Noise.NoiseParams edgeNoiseParams,
 		Noise.NoiseParams contourNoiseParams) 
     {
+
+		Debug.Log ("baseCenterPosition " + baseCenterPosition.x + " " + baseCenterPosition.y + " " + baseCenterPosition.z);
 		int divisions = (int)(12f * jaggedDensity);
 		int numVertices = 2 * divisions * meshRings - (divisions - 1);
 		
@@ -76,7 +78,7 @@ public static class MeshGenerator {
 			contourNoiseParams.offset,
 			contourNoiseParams.normalizeMode);
 
-		float[,] topNoiseMapType2 = Noise.GenerateNoiseMap(divisions, meshRings,
+		float[,] topNoiseMapType2 = Noise.GenerateNoiseMap(meshRings, divisions,
 			seed,
 			contourNoiseParams.noiseScale,
 			contourNoiseParams.octaves,
@@ -111,26 +113,31 @@ public static class MeshGenerator {
 				{
 					continue;
 				}
-
-				// meshData.vertices[topVertexIndex] = new Vector3(
-				// 	xPart + baseCenterPosition.x, 
-				// 	baseCenterPosition.y + topNoiseMap[i+j,0] * (maxTopHeight * (1 -(float)j/(float)meshRings)), 
-				// 	zPart + baseCenterPosition.z);
-
-				// meshData.vertices[botVertexIndex] = new Vector3(
-				// 	xPart + baseCenterPosition.x,
-				// 	baseCenterPosition.y - topNoiseMap[i + j, 0] * (maxBotHeight *  ( 1f - (float)j / (float)meshRings)),
-				// 	zPart + baseCenterPosition.z);
+				
+				float curve1 = 1 - ((float)j/(float)meshRings);
+				float curve2 = 1 - (float)Math.Sqrt((float)j/(float)meshRings);
+				float curve3 = 1 - (float)Math.Pow((float)j/(float)meshRings, 2);
+				 
 
 				meshData.vertices[topVertexIndex] = new Vector3(
 					xPart + baseCenterPosition.x, 
-					baseCenterPosition.y + topNoiseMapType2[noiseIdx,j] * (maxTopHeight * (1 -(float)j/(float)meshRings)), 
+					baseCenterPosition.y + topNoiseMap[i+j,0] * (maxTopHeight * curve3), 
 					zPart + baseCenterPosition.z);
 
 				meshData.vertices[botVertexIndex] = new Vector3(
 					xPart + baseCenterPosition.x,
-					baseCenterPosition.y - topNoiseMapType2[noiseIdx,j] * (maxBotHeight *  ( 1f - (float)j / (float)meshRings)),
+					baseCenterPosition.y - topNoiseMap[i + j, 0] * (maxBotHeight * curve3),
 					zPart + baseCenterPosition.z);
+
+				// meshData.vertices[topVertexIndex] = new Vector3(
+				// 	xPart + baseCenterPosition.x, 
+				// 	baseCenterPosition.y + topNoiseMapType2[j, noiseIdx] * (maxTopHeight * (1f -(float)j/(float)meshRings)), 
+				// 	zPart + baseCenterPosition.z);
+
+				// meshData.vertices[botVertexIndex] = new Vector3(
+				// 	xPart + baseCenterPosition.x,
+				// 	baseCenterPosition.y - topNoiseMapType2[j, noiseIdx] * (maxBotHeight *  ( 1f - (float)j / (float)meshRings)),
+				// 	zPart + baseCenterPosition.z);
 
 				
 				if(noiseIdx < divisions-1 && j < meshRings - 2){
@@ -140,7 +147,10 @@ public static class MeshGenerator {
 						// add island bottom triangles 
 						meshData.AddTriangle(botVertexIndex, botVertexIndex - 1, botVertexIndex - (meshRings + 1));
 						meshData.AddTriangle(botVertexIndex, botVertexIndex - (meshRings + 1),  botVertexIndex - meshRings);
-					// }
+				}
+
+				if(j == meshRings-1){
+					
 				}
 
 				topVertexIndex++;
@@ -159,12 +169,24 @@ public static class MeshGenerator {
 		//raise central vertex
 		meshData.vertices[numVertices/2] = new Vector3(baseCenterPosition.x, topNoiseMap[numVertices / 2-1, 0] * maxTopHeight, baseCenterPosition.z);
 
-		topVertexIndex -= meshRings+divisions/3;
-		botVertexIndex += meshRings+divisions/3;
+		Debug.Log ( "Divisions " + divisions);
+		Debug.Log ( "MeshRings " + meshRings);
+		
+		topVertexIndex -= meshRings+divisions/3+4;
+		botVertexIndex += meshRings+divisions/3+4;
 
 		//patch the beginnning and end triangles 
-		for (int i = 0; i < meshRings-1; i++){
+		for (int i = 1; i < meshRings; i++){
 			
+			if(i == meshRings - 1){
+			
+			Debug.Log ("top triangle " + meshData.vertices[topVertexIndex+i ] + " " + meshData.vertices[ topVertexIndex+i-1 ] + " "+ meshData.vertices[ topIdxBegin]);
+			Debug.Log ("bottom triangle " + meshData.vertices[botVertexIndex-i ] + " " + meshData.vertices[botIdxBegin ] + " "+ meshData.vertices[botVertexIndex-i+1]);
+					
+			meshData.AddTriangle(topIdxBegin, botVertexIndex-i+1, topVertexIndex+i-1); 
+			meshData.AddTriangle(topIdxBegin, botIdxBegin, botVertexIndex-i+1);
+			
+			}else{
 			//top 
 			meshData.AddTriangle(topIdxBegin, topIdxBegin+1, topVertexIndex + i); 
 			meshData.AddTriangle(topVertexIndex+i, topVertexIndex+i-1, topIdxBegin); 
@@ -172,14 +194,27 @@ public static class MeshGenerator {
 			// //bottom 
 			meshData.AddTriangle(botIdxBegin, botVertexIndex-i, botIdxBegin-1); 
 			meshData.AddTriangle(botVertexIndex-i, botIdxBegin, botVertexIndex-i+1); 
+		
+			}
+
+		
 
 			topIdxBegin++; 
 			botIdxBegin--;
 		}
 
+		topIdxBegin =  numVertices / 2 + 1 ;
+		botIdxBegin = numVertices / 2 - 1 +meshRings;
+		// meshData.AddTriangle(topIdxBegin, topIdxBegin + 1, botIdxBegin);
+
+		// for (int i = 0; i < divisions; i++){
+		// 	meshData.AddTriangle(topIdxBegin, topIdxBegin + 1, botIdxBegin);
+		// }
+
 		return meshData;
 
     }
+
 
 }
 
@@ -195,7 +230,10 @@ public class IslandMeshData {
 		vertices = new Vector3[numVerts];
 		uvs = new Vector2[numVerts];
 		// triangles = new int[ 2 * (divisions * (1 + 2*(meshRings-2)))];
-		triangles = new int[3 * 4 * meshRings * divisions]; //FIGURE OUT TRIANGLES TODO
+
+		Debug.Log ("original size  " + (3 * 4 * meshRings * divisions));
+		Debug.Log("old size " + (3 * 2 * (divisions * (1 + 2*(meshRings-2)))));
+		triangles = new int[3 * 2 * (divisions * (1 + 2*(meshRings-2)))]; //FIGURE OUT TRIANGLES TODO
 	}
 
 		public void AddTriangle(int a, int b, int c) {
