@@ -40,7 +40,7 @@ public static class MeshGenerator {
 		return meshData;
 
 	}  
-	public static IslandMeshData GenerateFloatingIslandMesh(
+	public static IslandMapData GenerateFloatingIslandMesh(
 		Vector3 baseCenterPosition,
 		float maxTopHeight,
 		float maxBotHeight,
@@ -52,18 +52,23 @@ public static class MeshGenerator {
 		int seed,
 		Noise.NoiseParams edgeNoiseParams,
 		Noise.NoiseParams contourNoiseParams,
-		IslandTopTerrainType[] topTerrains,
-		IslandBottomTerrainType[] bottomTerrains) 
+		IslandTerrianType[] topTerrains,
+		IslandTerrianType[] bottomTerrains) 
     {
 
 		Debug.Log ("baseCenterPosition " + baseCenterPosition.x + " " + baseCenterPosition.y + " " + baseCenterPosition.z);
 		int divisions = (int) jaggedDensity;
 		int numVertices = 2 * divisions * meshRings - (divisions - 1);
+		int numVertices2  = 2 * divisions * (meshRings-1) + 1;
+
+		Debug.Log ("OG Verts: " + numVertices);
+		Debug.Log ("new Verts: " + numVertices2);
 		
-		IslandMeshData meshData = new IslandMeshData(divisions, meshRings); 
+		IslandMapData mapData = new IslandMapData();
+		IslandMeshData meshData = new IslandMeshData(divisions, meshRings, numVertices2); 
 
 		float deltaTheta = 360f / (float)divisions;
-		float[] heightMap = new float[2 * divisions * meshRings];
+		Color[] colorMap = new Color[2 * (divisions+1) * (meshRings-1)];
 		float[,] noiseDivisionMap = Noise.GenerateNoiseMap(divisions, 1,
 			seed,
 			edgeNoiseParams.noiseScale,
@@ -85,7 +90,7 @@ public static class MeshGenerator {
 		float theta = 0;
 		int noiseIdx = 0;
 
-		int halfway = numVertices / 2; 
+		int halfway = numVertices2 / 2; 
 
 		int topVertexIndex = halfway + 1;
 		int botVertexIndex = halfway - 1;
@@ -96,11 +101,12 @@ public static class MeshGenerator {
 		meshData.vertices[halfway] = new Vector3(baseCenterPosition.x, maxTopHeight/2f, baseCenterPosition.z);
 		meshData.vertices[0] = new Vector3(baseCenterPosition.x, -maxBotHeight/2f, baseCenterPosition.z);
 		meshData.uvs [halfway] = new Vector2(0.5f, 0.5f);
-		heightMap[halfway] = meshData.vertices[halfway].y;
+		colorMap[halfway] = getTerrainColor(topTerrains, 0);
 
 		Debug.Log ( "Divisions " + divisions);
 		Debug.Log ( "MeshRings " + meshRings);
 		
+		int total_added_verts = 0;
 		//generate vertices 
 		for (int i = 0; i < divisions * (meshRings - 1); i += meshRings - 1)
 		{
@@ -109,6 +115,7 @@ public static class MeshGenerator {
 			float offset = rayLength;
 			float offsetIncr = rayLength / (float)meshRings;
 
+			int jj = 0;
 			for (int j = 0; j < meshRings; j++)
 			{
 
@@ -119,7 +126,6 @@ public static class MeshGenerator {
 				offset -= offsetIncr;
 				if(xPart == 0 && zPart == 0)
 				{
-					
 					continue;
 				}
 
@@ -129,8 +135,10 @@ public static class MeshGenerator {
 				float curve4 = 1 - 4f * (float) Math.Pow((float)j/(float)meshRings - 0.5, 2);
 				// float curve5 = 1 - 2f * (float) Math.Pow((float)j/(float)meshRings - 0.3, 2);
 				 
-				meshData.uvs [topVertexIndex] = new Vector2 (((float)i) % divisions * (meshRings-1) / (2*divisions), ((float) j)/meshRings);
-				meshData.uvs [botVertexIndex] = new Vector2 ((divisions + (((float)i) % divisions * (meshRings-1))) / (2*divisions), ((float) j)/meshRings);
+				
+				// meshData.uvs [botVertexIndex] = new Vector2 (0.5f + noiseIdx/(2*divisions), ((float) j)/meshRings);
+				// meshData.uvs [topVertexIndex] = new Vector2 ( ((float) j)/meshRings, ((float)i) % divisions * (meshRings-1) / (2*divisions));
+				// meshData.uvs [botVertexIndex] = new Vector2 ((divisions + (((float)i) % divisions * (meshRings-1))) / (2*divisions), ((float) j)/meshRings);
 
 				float top_height = baseCenterPosition.y + topNoiseMapType2[j, noiseIdx] * (maxTopHeight * curve4);
 				float bot_height = baseCenterPosition.y - topNoiseMapType2[j, noiseIdx] * (maxBotHeight * curve3);
@@ -144,18 +152,28 @@ public static class MeshGenerator {
 					xPart + baseCenterPosition.x,
 					bot_height,
 					zPart + baseCenterPosition.z);
-					
-				heightMap[topVertexIndex] = top_height;
-				heightMap[botVertexIndex] = bot_height;
+				total_added_verts+=2;
+
+				//normalize for color map
+				top_height = top_height / (maxTopHeight * 0.7f);
+				bot_height = Math.Abs(bot_height) / maxBotHeight;
+				
+				meshData.uvs [topVertexIndex] = new Vector2 (((float) jj)/(meshRings-1f), 0.5f + ((float)noiseIdx)/((float)divisions)/2f);
+				meshData.uvs [botVertexIndex] = new Vector2 (((float) jj)/(meshRings-1f), ((float)noiseIdx)/((float)divisions)/2f);
+
+				jj++;
+				
+				colorMap[topVertexIndex] = getTerrainColor(topTerrains, top_height);
+				colorMap[botVertexIndex] = getTerrainColor(bottomTerrains, bot_height);
 
 				// seal center disc 
 				if(j == 1 && noiseIdx < divisions-1){
 						//add island top triangles
 						// meshData.AddTriangle(topVertexIndex, topVertexIndex + (meshRings + 1), topVertexIndex + 1);
-						meshData.AddTriangle(topVertexIndex,  topVertexIndex + meshRings, topVertexIndex + (meshRings + 1), true);
-						meshData.AddTriangle(topVertexIndex, topVertexIndex + (meshRings - 1), topVertexIndex + meshRings, true);
+						meshData.AddTriangle(topVertexIndex,  topVertexIndex + meshRings, topVertexIndex + (meshRings + 1));
+						meshData.AddTriangle(topVertexIndex, topVertexIndex + (meshRings - 1), topVertexIndex + meshRings);
 
-						meshData.AddTriangle( botVertexIndex,  botVertexIndex - meshRings, botVertexIndex - (meshRings - 1), true);
+						meshData.AddTriangle( botVertexIndex,  botVertexIndex - meshRings, botVertexIndex - (meshRings - 1));
 
 						//connect to center
 						meshData.AddTriangle(topVertexIndex+meshRings-1, topVertexIndex, halfway);
@@ -207,7 +225,6 @@ public static class MeshGenerator {
 						meshData.AddTriangle(botVertexIndex, botIdxBegin, halfway);
 						meshData.AddTriangle(topIdxBegin, topVertexIndex, halfway);
 					}
-
 					
 					topIdxBegin++;
 					botIdxBegin--;
@@ -221,30 +238,40 @@ public static class MeshGenerator {
 			noiseIdx++;
 		}
 
-
-		return meshData;
-
+		Debug.Log("Total added verts " + total_added_verts);
+		mapData.meshData = meshData;
+		mapData.colorMap = colorMap;
+		return mapData;
     }
 
+    static Color getTerrainColor(IslandTerrianType [] terrainTypes, float height){
+		Color outputColor = new Color();
+		for (int i = 0; i < terrainTypes.Length; i++) {
+			if (height >= terrainTypes [i].height) {
+				outputColor = terrainTypes [i].colour;
+			} else {
+				break;
+			}
+		}
+		return outputColor;
+
+	}
 
 }
 
 public class IslandMeshData {
 	public Vector3[] vertices;
+	public float[] colorMap; 
 	public int[] triangles;
 	public Vector2[] uvs;
 
 	int triangleIndex;
 
-	public IslandMeshData(int divisions, int meshRings) {
-		int numVerts = 2 * divisions * meshRings;
+	public IslandMeshData(int divisions, int meshRing, int numVerts) {
 		vertices = new Vector3[numVerts];
 		uvs = new Vector2[numVerts];
 		// triangles = new int[ 2 * (divisions * (1 + 2*(meshRings-2)))];
-
-		Debug.Log ("original size  " + (3 * 4 * meshRings * divisions));
-		Debug.Log("old size " + (3 * 2 * (divisions * (1 + 2*(meshRings-2)))));
-		triangles = new int[3 * 4 * meshRings * divisions]; //FIGURE OUT TRIANGLES TODO
+		triangles = new int[3 * 4 * meshRing * divisions]; 
 	}
 
 		public void AddTriangle(int a, int b, int c, bool debug=false) {

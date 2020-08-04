@@ -35,8 +35,8 @@ public class FloatingIslandGenerator : MonoBehaviour
     public float maxTopHeight;
     public float maxBotHeight;
 
-    public IslandTopTerrainType[] topRegions;
-    public IslandBottomTerrainType[] botRegions;
+    public IslandTerrianType[] topRegions;
+    public IslandTerrianType[] botRegions;
 
 
     bool drawGizmos;
@@ -71,7 +71,10 @@ public class FloatingIslandGenerator : MonoBehaviour
             drawGizmos = true;
         }else if(drawMode == DrawMode.Mesh){
             drawGizmos = false;
-            display.DrawOnlyMesh (island.islandMesh);
+            // display.DrawOnlyMesh (island.islandMesh);
+            Texture2D islandTexture = TextureGenerator.TextureFromColourMap(island.islandData.colorMap,  (int) meshDensity-1, (int) (jaggedDensity * 2f) + 1);
+            
+            display.DrawIslandMesh(island.islandData.meshData, islandTexture);
         }
     }
 
@@ -88,7 +91,7 @@ public class FloatingIslandGenerator : MonoBehaviour
         {
 
             Gizmos.color = new Color(1, 0, 0, 0.5f);
-            foreach (Vector3 vec in island.islandMesh.vertices)
+            foreach (Vector3 vec in island.islandData.meshData.vertices)
             {             
                 Gizmos.DrawCube(vec, new Vector3(1, 1, 1));   
             }
@@ -109,7 +112,7 @@ public class FloatingIslandGenerator : MonoBehaviour
         int seed;
         public FloatingIslandGenerator islandGenerator;
 
-        public IslandMeshData islandMesh;
+        public IslandMapData islandData;
 
         GameObject meshObject;
         Vector2 position;
@@ -151,7 +154,7 @@ public class FloatingIslandGenerator : MonoBehaviour
               islandGenerator.offset_top,
               islandGenerator.normalizeMode);
 
-            this.islandMesh = MeshGenerator.GenerateFloatingIslandMesh(
+            this.islandData = MeshGenerator.GenerateFloatingIslandMesh(
                 this.baseCenterPosition,
                 islandGenerator.maxTopHeight,
                 islandGenerator.maxBotHeight,
@@ -248,15 +251,13 @@ public class FloatingIslandGenerator : MonoBehaviour
 
 
 [System.Serializable]
-public struct IslandTopTerrainType {
+public struct IslandTerrianType {
 	public string name;
 	public float height;
 	public Color colour;
 }
 
-[System.Serializable]
-public struct IslandBottomTerrainType {
-	public string name;
-	public float height;
-	public Color colour;
+public struct IslandMapData {
+    public IslandMeshData meshData;
+    public Color[] colorMap;
 }

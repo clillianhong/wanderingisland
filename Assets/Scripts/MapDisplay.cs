@@ -17,6 +17,11 @@ public class MapDisplay : MonoBehaviour {
 		meshRenderer.sharedMaterial.mainTexture = texture;
 	}
 
+	public void DrawIslandMesh(IslandMeshData meshData, Texture2D texture) {
+		meshFilter.sharedMesh = meshData.CreateMesh ();
+		meshRenderer.sharedMaterial.mainTexture = texture;
+	}
+
 	public void DrawOnlyMesh(IslandMeshData meshData){
 		meshFilter.sharedMesh = meshData.CreateMesh ();
 	}
