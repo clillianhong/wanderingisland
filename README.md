@@ -10,7 +10,7 @@ These are all using a linear relation to vary the height map maximum from edge t
 
 ## Mesh Generation - progress pics 
 
-some tragic bugs 
+some tragic bugs (see end for more) 
 ![](https://github.com/clillianhong/wanderingisland/blob/master/Media/mesh_wip_combined.png)
 
 ## Populating 2D vertex disk  
@@ -32,8 +32,12 @@ The paper used approximations based on hand drawn outlines, but for simplicity I
 
 
 
+## Tragic Bugs 
 
+1. Procedural Rose Generation???
+2. I put my eagle in for fun but he looks like the Avengers Helicarrier 
+3. "Giant Pita bread fights a mid century modern chandelier", Lillian Hong, 2020, Digital Media 
 
-
+![](https://github.com/clillianhong/wanderingisland/blob/master/Media/tragic_bugs_2_combined.png)
 
 
