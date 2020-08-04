@@ -35,6 +35,10 @@ public class FloatingIslandGenerator : MonoBehaviour
     public float maxTopHeight;
     public float maxBotHeight;
 
+    public IslandTopTerrainType[] topRegions;
+    public IslandBottomTerrainType[] botRegions;
+
+
     bool drawGizmos;
 
 
@@ -158,7 +162,9 @@ public class FloatingIslandGenerator : MonoBehaviour
                 this.meshDensity,
                 this.seed,
                 edgeNoiseParams,
-                contourNoiseParams);
+                contourNoiseParams,
+                islandGenerator.topRegions,
+                islandGenerator.botRegions);
         }
     }
       class FloatingIslandMesh
@@ -238,4 +244,19 @@ public class FloatingIslandGenerator : MonoBehaviour
     }
 
 
+}
+
+
+[System.Serializable]
+public struct IslandTopTerrainType {
+	public string name;
+	public float height;
+	public Color colour;
+}
+
+[System.Serializable]
+public struct IslandBottomTerrainType {
+	public string name;
+	public float height;
+	public Color colour;
 }
