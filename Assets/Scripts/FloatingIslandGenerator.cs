@@ -38,15 +38,15 @@ public class FloatingIslandGenerator : MonoBehaviour
     public IslandTerrianType[] topRegions;
     public IslandTerrianType[] botRegions;
 
+    public Material islandMaterial;
 
     bool drawGizmos;
-
 
 
     // Start is called before the first frame update
     void Start()
     {
-   
+        CreateIsland();
     }
 
     // Update is called once per frame
@@ -72,9 +72,9 @@ public class FloatingIslandGenerator : MonoBehaviour
         }else if(drawMode == DrawMode.Mesh){
             drawGizmos = false;
             // display.DrawOnlyMesh (island.islandMesh);
-            Texture2D islandTexture = TextureGenerator.TextureFromColourMap(island.islandData.colorMap,  (int) meshDensity-1, (int) (jaggedDensity * 2f) + 1);
+            //Texture2D islandTexture = TextureGenerator.TextureFromColourMap(island.islandData.colorMap,  (int) meshDensity-1, (int) (jaggedDensity * 2f) + 1);
             
-            display.DrawIslandMesh(island.islandData.meshData, islandTexture);
+            //display.DrawIslandMesh(island.islandData.meshData, islandTexture);
         }
     }
 
@@ -82,6 +82,7 @@ public class FloatingIslandGenerator : MonoBehaviour
     {
         island = new FloatingIsland(new Vector3(0, 0, 0), minRadius, seed, islandScale, jaggedDensity, jaggedScale, meshDensity);
         islandCreated = true;
+        island.CreateIsland();
     }
 
 
@@ -103,30 +104,26 @@ public class FloatingIslandGenerator : MonoBehaviour
     }
         public class FloatingIsland
     {
+
+        GameObject meshObject;
+		Bounds bounds;
+
+		MeshRenderer meshRenderer;
+		MeshFilter meshFilter;
+
         Vector3 baseCenterPosition;
+        
+        public IslandMapData islandData;
+        
+        public FloatingIslandGenerator islandGenerator;
+
+        //island attributes
         float minorRadius;
         float islandScale;
         float jaggedScale;
         float jaggedDensity;
         int meshDensity;
         int seed;
-        public FloatingIslandGenerator islandGenerator;
-
-        public IslandMapData islandData;
-
-        GameObject meshObject;
-        Vector2 position;
-        Bounds bounds;
-
-        MeshRenderer meshRenderer;
-        MeshFilter meshFilter;
-
-        LODInfo[] detailLevels;
-        FloatingIslandMesh[] lodMeshes;
-
-        MapData mapData;
-        bool mapDataReceived;
-        int previousLODIndex = -1;
 
         public FloatingIsland(Vector3 center, float minRadius, int seed, float islandScale, float jaggedDensity, float jaggedScale, int meshDensity)
         {
@@ -134,11 +131,21 @@ public class FloatingIslandGenerator : MonoBehaviour
             this.baseCenterPosition = center;
             this.minorRadius = minRadius;
             this.islandScale = islandScale;
-            this.islandScale = 1f; 
             this.jaggedDensity = jaggedDensity;
             this.jaggedScale = jaggedScale;
             this.seed = seed;
             this.meshDensity = meshDensity;
+
+            meshObject = new GameObject("Terrain Chunk");
+			meshRenderer = meshObject.AddComponent<MeshRenderer>();
+			meshFilter = meshObject.AddComponent<MeshFilter>();
+			meshRenderer.material = islandGenerator.islandMaterial;
+
+            meshObject.transform.position = center * islandScale;
+			meshObject.transform.parent = islandGenerator.transform;
+			meshObject.transform.localScale = Vector3.one * islandScale;
+			SetVisible(false);
+
 
             Noise.NoiseParams edgeNoiseParams = new Noise.NoiseParams(islandGenerator.noiseScale,
                 islandGenerator.octaves,
@@ -169,7 +176,27 @@ public class FloatingIslandGenerator : MonoBehaviour
                 islandGenerator.topRegions,
                 islandGenerator.botRegions);
         }
+
+		public void SetVisible(bool visible) {
+			meshObject.SetActive (visible);
+		}
+
+		public bool IsVisible() {
+			return meshObject.activeSelf;
+		}
+
+        public void CreateIsland(){
+            Texture2D islandTexture = TextureGenerator.TextureFromColourMap(this.islandData.colorMap,  (int) this.meshDensity-1, (int) (this.jaggedDensity * 2f) + 1);
+            meshRenderer.material.mainTexture = islandTexture;
+            this.meshFilter.mesh = this.islandData.meshData.CreateMesh();
+            SetVisible(true);
+        }
+
     }
+
+
+
+
       class FloatingIslandMesh
     {
 
