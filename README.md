@@ -2,7 +2,7 @@
 
 # Wandering Islands
 Procedural generation of floating islands in Unity, adapted from [this paper](https://www.diva-portal.org/smash/get/diva2:830483/FULLTEXT01.pdf)
-![](https://github.com/clillianhong/wanderingisland/blob/master/Media/pink3.png)
+<div style="text-align:center"><img src="https://github.com/clillianhong/wanderingisland/blob/master/Media/pink3.png" /></div>
 
 ## Poisson Disc point generation for distributing islands 
 The current system only utilizes one layer of 2D poisson disc points based on this [paper](https://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph07-poissondisk.pdf), though in the future it might be fun to implement a [faster 3D version](http://graphics.cs.kuleuven.be/publications/LD06PSD/LD06PSD_paper.pdf) to be able to vary radius. 
