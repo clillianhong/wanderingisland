@@ -8,6 +8,7 @@ using System.Collections.Specialized;
 public class FloatingIslandGenerator : MonoBehaviour
 {
     public enum DrawMode {Gizmos, Mesh};
+    public int world_length;
     public DrawMode drawMode;
     public int octaves;
     public float persistance;
@@ -15,24 +16,33 @@ public class FloatingIslandGenerator : MonoBehaviour
     public Noise.NormalizeMode normalizeMode;
     public Vector2 offset;
     public bool autoUpdate;
+    FloatingIsland editorIsland;
 
-    public float minRadius;
-    public int seed;
-    public float islandScale;
+   
+    
     public float noiseScale;
     public float jaggedDensity;
     public float jaggedScale;
     public int meshDensity;
     bool islandCreated; 
 
-    FloatingIsland island;
+    public int seed;
     public float noiseScale_top;
     public int octaves_top;
     public float persistance_top;
     public float lacunarity_top;
     public Vector2 offset_top;
 
+
+    //island parameters
+    public float islandScale;
+    public int minRadius;
+    public int maxRadius;
+
+    public float minTopHeight;
     public float maxTopHeight;
+
+    public float minBotHeight;
     public float maxBotHeight;
 
     public IslandTerrianType[] topRegions;
@@ -42,11 +52,15 @@ public class FloatingIslandGenerator : MonoBehaviour
 
     bool drawGizmos;
 
+    List<Vector3> islandCenters;
+
+
 
     // Start is called before the first frame update
     void Start()
     {
-        CreateIsland();
+        islandCenters = PoissonDisks.Generate3DLayer(gameObject.transform.position, seed, maxRadius, world_length, world_length, 30, maxTopHeight + maxBotHeight * 3);
+        SpawnAllIslands();
     }
 
     // Update is called once per frame
@@ -54,53 +68,62 @@ public class FloatingIslandGenerator : MonoBehaviour
     {
        
     }
-
-    public FloatingIsland getIsland()
-    {
-        return island;
-
-    }
-   
     public void DrawMapInEditor()
     {
         MapDisplay display = FindObjectOfType<MapDisplay> ();
 
-        CreateIsland();
+        // CreateIsland();
+        
 
         if(drawMode == DrawMode.Gizmos){
             drawGizmos = true;
         }else if(drawMode == DrawMode.Mesh){
             drawGizmos = false;
-            // display.DrawOnlyMesh (island.islandMesh);
-            //Texture2D islandTexture = TextureGenerator.TextureFromColourMap(island.islandData.colorMap,  (int) meshDensity-1, (int) (jaggedDensity * 2f) + 1);
-            
-            //display.DrawIslandMesh(island.islandData.meshData, islandTexture);
+
+            FloatingIsland editorIsland = new FloatingIsland(gameObject.transform.position, this.maxRadius, seed, islandScale, jaggedDensity, jaggedScale, meshDensity, this.maxTopHeight, this.maxBotHeight);
+            Texture2D islandTexture = TextureGenerator.TextureFromColourMap(editorIsland.islandData.colorMap,  (int) meshDensity-1, (int) (jaggedDensity * 2f) + 1);
+            display.DrawIslandMesh(editorIsland.islandData.meshData, islandTexture);
+        }
+        // drawGizmos = true;
+        
+    }
+
+    public FloatingIsland CreateIsland(Vector3 position, int seed, float islandScale, float radius, float topHeight, float botHeight)
+    {
+        FloatingIsland floatingIsland = new FloatingIsland(position, minRadius, seed, islandScale, jaggedDensity, jaggedScale, meshDensity, topHeight, botHeight);
+        islandCreated = true;
+        floatingIsland.CreateIsland();
+        return floatingIsland;
+    }
+
+    public void SpawnAllIslands(){
+        System.Random prng = new System.Random(seed);
+        foreach (Vector3 center in islandCenters){
+            Debug.Log( "spawning! ");
+            // float islandScale = ((float) (prng.Next((int) this.islandScale-5, (int) this.islandScale+5))) / (this.islandScale+5f);
+            float islandScale = GetRandomFloat(0.7,3, prng);
+            float radius = (float) prng.Next(this.minRadius, this.maxRadius);
+            float topHeight = (float) prng.Next((int) this.minTopHeight, (int) this.maxTopHeight);
+            float botHeight = (float) prng.Next((int) this.minBotHeight, (int) this.maxBotHeight);
+            CreateIsland(center, this.seed, islandScale, radius, topHeight, botHeight);
         }
     }
 
-    public void CreateIsland()
-    {
-        island = new FloatingIsland(new Vector3(0, 0, 0), minRadius, seed, islandScale, jaggedDensity, jaggedScale, meshDensity);
-        islandCreated = true;
-        island.CreateIsland();
+    public float GetRandomFloat(double minimum, double maximum, System.Random rand)
+    { 
+        return (float)(rand.NextDouble() * (maximum - minimum) + minimum);
     }
-
 
     void OnDrawGizmos()
     {
-        if (islandCreated == true && drawGizmos)
-        {
-
-            Gizmos.color = new Color(1, 0, 0, 0.5f);
-            foreach (Vector3 vec in island.islandData.meshData.vertices)
+        Gizmos.color = new Color(1,0,0,1);
+       if(drawGizmos){
+            
+            foreach (Vector3 vec in islandCenters)
             {             
                 Gizmos.DrawCube(vec, new Vector3(1, 1, 1));   
             }
-
-
-        }
-        // Gizmos.color = new Color(0, 0, 1, 1f);
-        // Gizmos.DrawCube(new Vector3(0,0,0), new Vector3(1, 1, 1));   
+       }
     }
         public class FloatingIsland
     {
@@ -125,7 +148,7 @@ public class FloatingIslandGenerator : MonoBehaviour
         int meshDensity;
         int seed;
 
-        public FloatingIsland(Vector3 center, float minRadius, int seed, float islandScale, float jaggedDensity, float jaggedScale, int meshDensity)
+        public FloatingIsland(Vector3 center, float minRadius, int seed, float islandScale, float jaggedDensity, float jaggedScale, int meshDensity, float topHeight, float botHeight)
         {
             islandGenerator = FindObjectOfType<FloatingIslandGenerator>();
             this.baseCenterPosition = center;
@@ -136,10 +159,11 @@ public class FloatingIslandGenerator : MonoBehaviour
             this.seed = seed;
             this.meshDensity = meshDensity;
 
-            meshObject = new GameObject("Terrain Chunk");
+            meshObject = new GameObject("Floating Island");
 			meshRenderer = meshObject.AddComponent<MeshRenderer>();
 			meshFilter = meshObject.AddComponent<MeshFilter>();
-			meshRenderer.material = islandGenerator.islandMaterial;
+            Material mat = new Material(Shader.Find("Specular"));
+			meshRenderer.material = mat;
 
             meshObject.transform.position = center * islandScale;
 			meshObject.transform.parent = islandGenerator.transform;
@@ -163,10 +187,10 @@ public class FloatingIslandGenerator : MonoBehaviour
 
             this.islandData = MeshGenerator.GenerateFloatingIslandMesh(
                 this.baseCenterPosition,
-                islandGenerator.maxTopHeight,
-                islandGenerator.maxBotHeight,
+                topHeight,
+                botHeight,
                 islandGenerator.jaggedScale,
-                islandGenerator.islandScale,
+                islandScale,
                 this.minorRadius,
                 islandGenerator.jaggedDensity, 
                 this.meshDensity,

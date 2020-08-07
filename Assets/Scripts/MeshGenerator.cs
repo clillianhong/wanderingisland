@@ -55,14 +55,8 @@ public static class MeshGenerator {
 		IslandTerrianType[] topTerrains,
 		IslandTerrianType[] bottomTerrains) 
     {
-
-		Debug.Log ("baseCenterPosition " + baseCenterPosition.x + " " + baseCenterPosition.y + " " + baseCenterPosition.z);
 		int divisions = (int) jaggedDensity;
-		int numVertices = 2 * divisions * meshRings - (divisions - 1);
 		int numVertices2  = 2 * divisions * (meshRings-1) + 1;
-
-		Debug.Log ("OG Verts: " + numVertices);
-		Debug.Log ("new Verts: " + numVertices2);
 		
 		IslandMapData mapData = new IslandMapData();
 		IslandMeshData meshData = new IslandMeshData(divisions, meshRings, numVertices2); 
@@ -98,15 +92,13 @@ public static class MeshGenerator {
 		int topIdxBegin =  halfway + 1;
 		int botIdxBegin = halfway - 1;
 
-		meshData.vertices[halfway] = new Vector3(baseCenterPosition.x, maxTopHeight/2f, baseCenterPosition.z);
-		meshData.vertices[0] = new Vector3(baseCenterPosition.x, -maxBotHeight/2f, baseCenterPosition.z);
+		meshData.vertices[halfway] = new Vector3(baseCenterPosition.x, maxTopHeight/2f + baseCenterPosition.y, baseCenterPosition.z);
+		meshData.vertices[0] = new Vector3(baseCenterPosition.x, -maxBotHeight/2f + baseCenterPosition.y, baseCenterPosition.z);
 		meshData.uvs [halfway] = new Vector2(0.5f, 0.5f);
 		colorMap[halfway] = getTerrainColor(topTerrains, 0);
 
-		Debug.Log ( "Divisions " + divisions);
-		Debug.Log ( "MeshRings " + meshRings);
-		
 		int total_added_verts = 0;
+
 		//generate vertices 
 		for (int i = 0; i < divisions * (meshRings - 1); i += meshRings - 1)
 		{
@@ -136,10 +128,6 @@ public static class MeshGenerator {
 				// float curve5 = 1 - 2f * (float) Math.Pow((float)j/(float)meshRings - 0.3, 2);
 				 
 				
-				// meshData.uvs [botVertexIndex] = new Vector2 (0.5f + noiseIdx/(2*divisions), ((float) j)/meshRings);
-				// meshData.uvs [topVertexIndex] = new Vector2 ( ((float) j)/meshRings, ((float)i) % divisions * (meshRings-1) / (2*divisions));
-				// meshData.uvs [botVertexIndex] = new Vector2 ((divisions + (((float)i) % divisions * (meshRings-1))) / (2*divisions), ((float) j)/meshRings);
-
 				float top_height = baseCenterPosition.y + topNoiseMapType2[j, noiseIdx] * (maxTopHeight * curve4);
 				float bot_height = baseCenterPosition.y - topNoiseMapType2[j, noiseIdx] * (maxBotHeight * curve3);
 
@@ -155,8 +143,8 @@ public static class MeshGenerator {
 				total_added_verts+=2;
 
 				//normalize for color map
-				top_height = top_height / (maxTopHeight * 0.7f);
-				bot_height = Math.Abs(bot_height) / maxBotHeight;
+				top_height = (top_height-baseCenterPosition.y) / (maxTopHeight * 0.7f) ;
+				bot_height = (Math.Abs(bot_height-baseCenterPosition.y)) / maxBotHeight;
 				
 				meshData.uvs [topVertexIndex] = new Vector2 (((float) jj)/(meshRings-1f), 0.5f + ((float)noiseIdx)/((float)divisions)/2f);
 				meshData.uvs [botVertexIndex] = new Vector2 (((float) jj)/(meshRings-1f), ((float)noiseIdx)/((float)divisions)/2f);
