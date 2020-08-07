@@ -2,6 +2,15 @@
 
 # Wandering Islands
 Procedural generation of floating islands in Unity, adapted from [this paper](https://www.diva-portal.org/smash/get/diva2:830483/FULLTEXT01.pdf)
+![](https://github.com/clillianhong/wanderingisland/blob/master/Media/pink3.png)
+
+## Poisson Disc point generation for distributing islands 
+The current system only utilizes one layer of 2D poisson disc points based on this [paper](https://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph07-poissondisk.pdf), though in the future it might be fun to implement a [faster 3D version](http://graphics.cs.kuleuven.be/publications/LD06PSD/LD06PSD_paper.pdf) to be able to vary radius. 
+![](https://github.com/clillianhong/wanderingisland/blob/master/Media/poisson_combined.png)
+
+## Height map adjustment curves 
+Ended up using the third curve on the bottom and the fourth on top, to mitigate the issues with the radial mesh. 
+![](https://github.com/clillianhong/wanderingisland/blob/master/Media/curves_combined.png)
 
 ## Mesh Generation - finished, untextured 
 
@@ -39,5 +48,8 @@ The paper used approximations based on hand drawn outlines, but for simplicity I
 3. "Giant Pita bread fights a mid century modern chandelier", Lillian Hong, 2020, Digital Media 
 
 ![](https://github.com/clillianhong/wanderingisland/blob/master/Media/tragic_bugs_2_combined.png)
+
+Noise bug that wasn't noticeable till higher density meshes were tested. 
+![](https://github.com/clillianhong/wanderingisland/blob/master/Media/noise_bug_combined.png)
 
 
