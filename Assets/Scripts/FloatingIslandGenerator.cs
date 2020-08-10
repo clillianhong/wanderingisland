@@ -162,8 +162,9 @@ public class FloatingIslandGenerator : MonoBehaviour
             meshObject = new GameObject("Floating Island");
 			meshRenderer = meshObject.AddComponent<MeshRenderer>();
 			meshFilter = meshObject.AddComponent<MeshFilter>();
-            Material mat = new Material(Shader.Find("Specular"));
-			meshRenderer.material = mat;
+            Material diffuse = islandGenerator.GetComponent<MeshRenderer>().sharedMaterial;
+
+			meshRenderer.material = diffuse;
 
             meshObject.transform.position = center * islandScale;
 			meshObject.transform.parent = islandGenerator.transform;
