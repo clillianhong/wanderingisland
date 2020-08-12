@@ -226,7 +226,6 @@ public static class MeshGenerator {
 			noiseIdx++;
 		}
 
-		Debug.Log("Total added verts " + total_added_verts);
 		mapData.meshData = meshData;
 		mapData.colorMap = colorMap;
 		return mapData;

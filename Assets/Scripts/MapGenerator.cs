@@ -45,7 +45,8 @@ public class MapGenerator : MonoBehaviour {
 	public void DrawMapInEditor() {
 		MapData mapData = GenerateMapData (Vector2.zero);
 
-		MapDisplay display = FindObjectOfType<MapDisplay> ();
+		MapDisplay display = gameObject.GetComponent(typeof(MapDisplay)) as MapDisplay; 
+		
 		if (drawMode == DrawMode.NoiseMap) {
 			display.DrawTexture (TextureGenerator.TextureFromHeightMap (mapData.heightMap));
 		} else if (drawMode == DrawMode.ColourMap) {

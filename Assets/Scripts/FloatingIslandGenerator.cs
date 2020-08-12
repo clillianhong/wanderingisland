@@ -59,7 +59,7 @@ public class FloatingIslandGenerator : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        islandCenters = PoissonDisks.Generate3DLayer(gameObject.transform.position, seed, maxRadius, world_length, world_length, 30, maxTopHeight + maxBotHeight * 3);
+        islandCenters = PoissonDisks.Generate3DLayer(gameObject.transform.position, seed, maxRadius*2, world_length, world_length, 30, maxTopHeight + maxBotHeight * 3);
         SpawnAllIslands();
     }
 
