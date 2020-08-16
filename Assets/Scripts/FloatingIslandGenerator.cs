@@ -59,7 +59,7 @@ public class FloatingIslandGenerator : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        islandCenters = PoissonDisks.Generate3DLayer(gameObject.transform.position, seed, maxRadius*2, world_length, world_length, 30, maxTopHeight + maxBotHeight * 3);
+        islandCenters = PoissonDisks.Generate3DLayer(gameObject.transform.position, seed, maxRadius*3, world_length, world_length, 30, maxTopHeight + maxBotHeight * 3);
         SpawnAllIslands();
     }
 
@@ -72,9 +72,6 @@ public class FloatingIslandGenerator : MonoBehaviour
     {
         MapDisplay display = FindObjectOfType<MapDisplay> ();
 
-        // CreateIsland();
-        
-
         if(drawMode == DrawMode.Gizmos){
             drawGizmos = true;
         }else if(drawMode == DrawMode.Mesh){
@@ -84,7 +81,6 @@ public class FloatingIslandGenerator : MonoBehaviour
             Texture2D islandTexture = TextureGenerator.TextureFromColourMap(editorIsland.islandData.colorMap,  (int) meshDensity-1, (int) (jaggedDensity * 2f) + 1);
             display.DrawIslandMesh(editorIsland.islandData.meshData, islandTexture);
         }
-        // drawGizmos = true;
         
     }
 
@@ -166,7 +162,7 @@ public class FloatingIslandGenerator : MonoBehaviour
 
 			meshRenderer.material = diffuse;
 
-            meshObject.transform.position = center * islandScale;
+            meshObject.transform.position = center;
 			meshObject.transform.parent = islandGenerator.transform;
 			meshObject.transform.localScale = Vector3.one * islandScale;
 			SetVisible(false);
